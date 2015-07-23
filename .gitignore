@@ -96,5 +96,8 @@ wp-content/plugins/hello.php
 # ignore specific themes
 wp-content/themes/twenty*/
 
+# ignore react examples
+wp-content/themes/vccw_theme/js/react.0.13.3/examples/
+
 # ignore node/grunt dependency directories
 node_modules/

@@ -8,22 +8,16 @@ Author: AHWS
 Author URI: http://hollysphar.net
 */
 // defined blocks direct access to plugin files
-defined( 'ABSPATH' ) or die( 'Plugin cannot be accessed directly.');
+defined( 'ABSPATH' ) or die( 'Plugin file cannot be accessed directly.');
 
 if ( ! class_exists( 'ReactJS' ) ) {
 	class ReactJS
 	{
 		/**
-		 * Tag identifier used by file includes and selector attributes
+		 * Tag identifier used by file includes and selector attributes.
 		 * @var string
 		 */
 		protected $tag = 'reactjs';
-
-		/**
-		 * List of options to determine plugin behavior.
-		 * @var array
-		 */
-		protected $options = array();
 
 		/*
 		 * another protected var
@@ -31,6 +25,60 @@ if ( ! class_exists( 'ReactJS' ) ) {
 		protected $name = 'ReactJS';
 
 		protected $version = '0.1';
+
+		/**
+		 * List of options to determine plugin behavior.
+		 * @var array
+		 */
+		protected $options = array();
+
+		/**
+		 * List of settings displayed on the admin page
+		 * @var array
+		 **/
+		protected $settings = array(
+			'typeDelay' => array(
+				'description' => 'Minimum delay, in ms, between typing characters.',
+				'validator' => 'numeric',
+				'placeholder' => 100
+			),
+			'backDelay' => array(
+				'description' => 'Minimum delay, in ms, between deleting characters.',
+				'validator' => 'numeric',
+				'placeholder' => 50
+			),
+			'blinkSpeed' => array(
+				'description' => 'Interval, in ms, that the cursor will flash.',
+				'validator' => 'numeric',
+				'placeholder' => 1000
+			),
+			'cursor' => array(
+				'description' => 'Character used to represent the cursor.',
+				'placeholder' => '|'
+			),
+			'delay' => array(
+				'description' => 'Time in ms to pause before deleting the current text.',
+				'validator' => 'numeric',
+				'placeholder' => 2000
+			),
+			'preserve' => array(
+				'description' => 'Prevent auto delete of the current string and begin outputting the next string.',
+				'type' => 'checkbox'
+			),
+			'prefix' => array(
+				'description' => 'Begin each string with this prefix value.',
+			),
+			'loop' => array(
+				'description' => 'Number of times to loop through the output strings, for unlimited use 0.',
+				'validator' => 'numeric',
+				'placeholder' => 0
+			),
+			'humanise' => array(
+				'description' => 'Add a random delay before each character to represent human interaction.',
+				'type' => 'checkbox',
+				'default' => true
+			)
+		);
 
 		public function __construct()
 		{
@@ -40,7 +88,7 @@ if ( ! class_exists( 'ReactJS' ) ) {
 
 			add_shortcode( $this->tag, array( &$this, 'shortcode' ) );
 			add_action( 'wp_enqueue_scripts', 'wpb_adding_scripts' );
-			
+
 			if( is_admin() ) {
 				add_action( 'admin_init', array( &$this, 'settings' ) );
 			}
@@ -72,27 +120,6 @@ if ( ! class_exists( 'ReactJS' ) ) {
 		}
 
 		/**
-		 * List of setting sdisplayed on the admin page
-		 * @var array
-		 **/
-		protected $settings = array(
-			'typeDelay' => array(
-				'description' => 'Minimum delay, in me, between typing characters.',
-				'validator' => 'numeric',
-				'placeholder' => 100
-			),
-			'cursor' => array(
-				'description' => 'Character used to represent the cursor.',
-				'placeholder' => '|'
-			),
-			'humanize' => array(
-				'description' => 'Add a random delay before each character to represent ...',
-				'type' => 'checkbox',
-				'default' => true
-			)
-		);
-
-		/**
 		 * Add the settings fields to the Reading settings page.
 		 * @access public
 		 */
@@ -109,7 +136,7 @@ if ( ! class_exists( 'ReactJS' ) ) {
 			);
 			foreach ( $this->settings AS $id => $options ) {
 				$options['id'] = $id;
-				add_setting_field(
+				add_settings_field(
 					$this->tag . '_' . $id . '_settings',
 					$id,
 					array( &$this, 'settings_field' ),
@@ -118,6 +145,11 @@ if ( ! class_exists( 'ReactJS' ) ) {
 					$options
 				);
 			}
+			register_setting(
+				$section,
+				$this->tag,
+				array( &$this, 'settings_validate' )
+			);
 		}
 
 		public function settings_field( array $options = array() )
@@ -134,9 +166,6 @@ if ( ! class_exists( 'ReactJS' ) ) {
 			}
 			if ( isset( $this->options['placeholder'] ) ) {
 				$atts['value'] = $this->options[$options['id']];
-			}
-			if ( isset( $options['placeholder'] ) ) {
-				$atts['placeholder'] = $options['placeholder'];
 			}
 			if ( isset( $options['type'] ) && $options['type'] == 'chekbox' ) {
 				if ( $atts['value'] ) {
@@ -157,11 +186,11 @@ if ( ! class_exists( 'ReactJS' ) ) {
 	 		</label>
 	 		<?php
 
-	 		register_setting(
-	 			$section,
-	 			$this->tag,
-	 			array( &$this, 'settings_validate' )
-	 		);
+	 		// register_setting(
+	 		// 	$section,
+	 		// 	$this->tag,
+	 		// 	array( &$this, 'settings_validate' )
+	 		// );
 		}
 
 		public function settings_validate( $input )
@@ -171,8 +200,12 @@ if ( ! class_exists( 'ReactJS' ) ) {
 			foreach ( $input AS $key => $value ) {
 				if ( $value == '' ) {
 					unset( $input[$key] );
-				} elseif ( isset( $this->settings[$key]['validator'] ) ) {
-					switch ( $this->settings[$key]['validator'] ) {
+				} 
+				$validator = false;
+				if ( isset( $this->settings[$key]['validator'] ) ) {
+					$validator = $this->settings[$key]['validator'];
+				}
+					switch ( $validator ) {
 						case 'numeric':
 						  if ( is_numeric( $value ) ) {
 						  	$input[$key] = intval( $value );
@@ -181,9 +214,9 @@ if ( ! class_exists( 'ReactJS' ) ) {
 						  	unset( $input[$key] );
 						  }
 						break;
-					}
-				} else {
-					$input[$key] = strip_tags( $value );
+				    default:
+					    $input[$key] = strip_tags( $value );
+				    break;
 				}
 			}
 			if ( count( $errors ) > 0 ) {
@@ -196,9 +229,10 @@ if ( ! class_exists( 'ReactJS' ) ) {
 			}
 			return $input;
 		}
-
 		// end class 
 	}
+
+	new ReactJS;
 }
 
 // @TODO: add this to ReactjJS class and make all 'reactjs' tags $thi->tag
@@ -216,3 +250,5 @@ function wpb_adding_scripts() {
 }
 // @TODO: after moving wpb_adding_scripts to class, move this to constructor
 add_action( 'wp_enqueue_scripts', 'wpb_adding_scripts' );
+
+
